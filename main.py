@@ -39,6 +39,7 @@ CHARACTER_IMAGES_DIR = IMAGES_DIR / "characters"
 POLICE_IMAGES_DIR = IMAGES_DIR / "police"
 PICKUP_IMAGES_DIR = IMAGES_DIR / "pickups"
 
+
 class ImageCache:
     """Cache for loaded images to avoid reloading"""
     _cache = {}
@@ -64,12 +65,13 @@ class ImageCache:
                 image = pygame.transform.scale(image, (width, height))
             cls._cache[key] = image
             return image
-        except:
+        except Exception as e:
             # Fallback to colored rectangle if image fails to load
             surface = pygame.Surface((width or 40, height or 40))
             surface.fill(fallback_color)
             cls._cache[key] = surface
             return surface
+
 
 class GameState(Enum):
     MENU = 1
@@ -77,10 +79,12 @@ class GameState(Enum):
     PAUSED = 3
     GAME_OVER = 4
 
+
 class WeaponType(Enum):
     PISTOL = 1
     RIFLE = 2
     SHOTGUN = 3
+
 
 @dataclass
 class Weapon:
@@ -90,6 +94,7 @@ class Weapon:
     max_ammo: int
     fire_rate: int
     type: WeaponType
+
 
 class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y, angle, damage, owner_type="player"):
@@ -117,6 +122,7 @@ class Bullet(pygame.sprite.Sprite):
     
     def is_alive(self):
         return self.age < self.lifetime
+
 
 class Pickup(pygame.sprite.Sprite):
     def __init__(self, x, y, pickup_type):
@@ -154,6 +160,7 @@ class Pickup(pygame.sprite.Sprite):
     def is_alive(self):
         return self.age < self.lifetime
 
+
 class Vehicle(pygame.sprite.Sprite):
     def __init__(self, x, y, vehicle_type="car"):
         super().__init__()
@@ -183,7 +190,7 @@ class Vehicle(pygame.sprite.Sprite):
         
         image_path = str(CAR_IMAGES_DIR / image_name)
         self.base_image = ImageCache.get_image(image_path, self.width, self.height, color)
-        self.image = self.base_image
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -220,6 +227,7 @@ class Vehicle(pygame.sprite.Sprite):
     
     def is_alive(self):
         return self.health > 0
+
 
 class NPC(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -292,6 +300,7 @@ class NPC(pygame.sprite.Sprite):
     def is_alive(self):
         return self.health > 0
 
+
 class Police(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -303,7 +312,7 @@ class Police(pygame.sprite.Sprite):
         # Load police car/officer image
         image_path = str(POLICE_IMAGES_DIR / "police.png")
         self.base_image = ImageCache.get_image(image_path, self.width, self.height, DARK_BLUE)
-        self.image = self.base_image
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -362,6 +371,7 @@ class Police(pygame.sprite.Sprite):
     def is_alive(self):
         return self.health > 0
 
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
@@ -373,7 +383,7 @@ class Player(pygame.sprite.Sprite):
         # Load player character image
         image_path = str(CHARACTER_IMAGES_DIR / "player.png")
         self.base_image = ImageCache.get_image(image_path, self.width, self.height, BLUE)
-        self.image = self.base_image
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -490,6 +500,7 @@ class Player(pygame.sprite.Sprite):
             return 100
         return (self.shots_hit / self.shots_fired) * 100
 
+
 class Mission:
     def __init__(self, mission_id):
         self.mission_id = mission_id
@@ -529,6 +540,7 @@ class Mission:
         if self.mission_type == "wanted":
             return f"{int(self.progress)}/5"
         return f"{int(self.progress)}/{self.target}"
+
 
 class Game:
     def __init__(self):
@@ -628,7 +640,7 @@ class Game:
         if self.state != GameState.PLAYING:
             return
         
-        keys = pygame.key.get_keys()
+        keys = pygame.key.get_pressed()
         mouse_pos = pygame.mouse.get_pos()
         
         world_mouse_x = mouse_pos[0] + self.camera_x
@@ -801,7 +813,7 @@ class Game:
             try:
                 with open("highscore.json", "r") as f:
                     scores = json.load(f)
-            except:
+            except Exception:
                 pass
         
         scores["money"] = max(scores["money"], self.player.money)
@@ -815,7 +827,7 @@ class Game:
             try:
                 with open("highscore.json", "r") as f:
                     return json.load(f)
-            except:
+            except Exception:
                 return {"money": 0, "kills": 0}
         return {"money": 0, "kills": 0}
     
@@ -1051,6 +1063,7 @@ class Game:
             self.clock.tick(FPS)
         
         pygame.quit()
+
 
 if __name__ == "__main__":
     game = Game()
