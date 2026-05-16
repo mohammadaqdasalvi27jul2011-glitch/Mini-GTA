@@ -6,6 +6,7 @@ from enum import Enum
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Optional
 import os
+from pathlib import Path
 
 # Initialize Pygame
 pygame.init()
@@ -28,6 +29,47 @@ YELLOW = (255, 255, 0)
 ORANGE = (255, 165, 0)
 CYAN = (0, 255, 255)
 LIGHT_GREEN = (144, 238, 144)
+
+# Asset paths
+ASSETS_DIR = Path("assets")
+IMAGES_DIR = ASSETS_DIR / "images"
+GUN_IMAGES_DIR = IMAGES_DIR / "guns"
+CAR_IMAGES_DIR = IMAGES_DIR / "cars"
+CHARACTER_IMAGES_DIR = IMAGES_DIR / "characters"
+POLICE_IMAGES_DIR = IMAGES_DIR / "police"
+PICKUP_IMAGES_DIR = IMAGES_DIR / "pickups"
+
+class ImageCache:
+    """Cache for loaded images to avoid reloading"""
+    _cache = {}
+    
+    @classmethod
+    def get_image(cls, path, width=None, height=None, fallback_color=WHITE):
+        """Load or get cached image. Returns surface or colored rectangle fallback"""
+        key = f"{path}_{width}_{height}"
+        
+        if key in cls._cache:
+            return cls._cache[key]
+        
+        try:
+            if not os.path.exists(path):
+                # Return fallback colored surface
+                surface = pygame.Surface((width or 40, height or 40))
+                surface.fill(fallback_color)
+                cls._cache[key] = surface
+                return surface
+            
+            image = pygame.image.load(path)
+            if width and height:
+                image = pygame.transform.scale(image, (width, height))
+            cls._cache[key] = image
+            return image
+        except:
+            # Fallback to colored rectangle if image fails to load
+            surface = pygame.Surface((width or 40, height or 40))
+            surface.fill(fallback_color)
+            cls._cache[key] = surface
+            return surface
 
 class GameState(Enum):
     MENU = 1
@@ -88,20 +130,26 @@ class Pickup(pygame.sprite.Sprite):
         
         self.width = 15
         self.height = 15
-        self.image = pygame.Surface((self.width, self.height))
-        color = LIGHT_GREEN if pickup_type == "health" else YELLOW
-        self.image.fill(color)
+        
+        # Try loading image, fallback to colored surface
+        if pickup_type == "health":
+            image_path = str(PICKUP_IMAGES_DIR / "health.png")
+            fallback_color = LIGHT_GREEN
+        else:
+            image_path = str(PICKUP_IMAGES_DIR / "ammo.png")
+            fallback_color = YELLOW
+        
+        self.image = ImageCache.get_image(image_path, self.width, self.height, fallback_color)
         self.rect = self.image.get_rect(center=(x, y))
     
     def update(self):
         self.age += 1
         self.blink = (self.age // 10) % 2 == 0
         
-        if self.blink:
-            color = LIGHT_GREEN if self.pickup_type == "health" else YELLOW
-            self.image.fill(color)
+        if not self.blink:
+            self.image.set_alpha(100)
         else:
-            self.image.fill((50, 50, 50))
+            self.image.set_alpha(255)
     
     def is_alive(self):
         return self.age < self.lifetime
@@ -119,19 +167,23 @@ class Vehicle(pygame.sprite.Sprite):
             self.max_health = 100
             self.speed = 8.0
             color = RED
+            image_name = "car.png"
         elif vehicle_type == "truck":
             self.width, self.height = 50, 30
             self.max_health = 150
             self.speed = 5.6
             color = ORANGE
+            image_name = "truck.png"
         else:  # motorcycle
             self.width, self.height = 35, 20
             self.max_health = 100
             self.speed = 10.4
             color = CYAN
+            image_name = "motorcycle.png"
         
-        self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(color)
+        image_path = str(CAR_IMAGES_DIR / image_name)
+        self.base_image = ImageCache.get_image(image_path, self.width, self.height, color)
+        self.image = self.base_image
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -159,7 +211,7 @@ class Vehicle(pygame.sprite.Sprite):
         self.vx *= 0.95
         self.vy *= 0.95
         
-        rotated = pygame.transform.rotate(self.image, -math.degrees(self.angle))
+        rotated = pygame.transform.rotate(self.base_image, -math.degrees(self.angle))
         self.rect = rotated.get_rect(center=(self.x, self.y))
         self.image = rotated
     
@@ -176,8 +228,10 @@ class NPC(pygame.sprite.Sprite):
         self.y = y
         self.width = 18
         self.height = 18
-        self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(GREEN)
+        
+        # Load NPC character image
+        image_path = str(CHARACTER_IMAGES_DIR / "civilian.png")
+        self.image = ImageCache.get_image(image_path, self.width, self.height, GREEN)
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -245,8 +299,11 @@ class Police(pygame.sprite.Sprite):
         self.y = y
         self.width = 45
         self.height = 25
-        self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(DARK_BLUE)
+        
+        # Load police car/officer image
+        image_path = str(POLICE_IMAGES_DIR / "police.png")
+        self.base_image = ImageCache.get_image(image_path, self.width, self.height, DARK_BLUE)
+        self.image = self.base_image
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -295,7 +352,7 @@ class Police(pygame.sprite.Sprite):
         self.vx *= 0.95
         self.vy *= 0.95
         
-        rotated = pygame.transform.rotate(self.image, -math.degrees(self.angle))
+        rotated = pygame.transform.rotate(self.base_image, -math.degrees(self.angle))
         self.rect = rotated.get_rect(center=(self.x, self.y))
         self.image = rotated
     
@@ -312,8 +369,11 @@ class Player(pygame.sprite.Sprite):
         self.y = y
         self.width = 20
         self.height = 20
-        self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(BLUE)
+        
+        # Load player character image
+        image_path = str(CHARACTER_IMAGES_DIR / "player.png")
+        self.base_image = ImageCache.get_image(image_path, self.width, self.height, BLUE)
+        self.image = self.base_image
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -337,6 +397,13 @@ class Player(pygame.sprite.Sprite):
         self.last_shot = 0
         self.shots_fired = 0
         self.shots_hit = 0
+        
+        # Load weapon images
+        self.weapon_images = {
+            WeaponType.PISTOL: ImageCache.get_image(str(GUN_IMAGES_DIR / "pistol.png"), 30, 15, YELLOW),
+            WeaponType.RIFLE: ImageCache.get_image(str(GUN_IMAGES_DIR / "rifle.png"), 40, 10, YELLOW),
+            WeaponType.SHOTGUN: ImageCache.get_image(str(GUN_IMAGES_DIR / "shotgun.png"), 35, 12, YELLOW),
+        }
     
     def handle_input(self, keys, mouse_pos):
         if self.in_vehicle:
@@ -366,9 +433,7 @@ class Player(pygame.sprite.Sprite):
             self.y = max(0, min(self.y, world_height))
         
         self.rect.center = (self.x, self.y)
-        original = pygame.Surface((self.width, self.height))
-        original.fill(BLUE)
-        rotated = pygame.transform.rotate(original, -math.degrees(self.angle))
+        rotated = pygame.transform.rotate(self.base_image, -math.degrees(self.angle))
         self.image = rotated
         self.rect = self.image.get_rect(center=(self.x, self.y))
     
@@ -468,7 +533,7 @@ class Mission:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Mini GTA - Complete Edition")
+        pygame.display.set_caption("Mini GTA - Complete Edition with 4K Assets")
         self.clock = pygame.time.Clock()
         self.running = True
         self.state = GameState.MENU
@@ -774,7 +839,7 @@ class Game:
         font_normal = pygame.font.Font(None, 30)
         
         title = font_title.render("MINI GTA", True, RED)
-        subtitle = font_subtitle.render("Open World Action Game", True, YELLOW)
+        subtitle = font_subtitle.render("Open World Action Game - 4K Assets", True, YELLOW)
         start = font_normal.render("Press SPACE to Start", True, WHITE)
         
         self.screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
@@ -794,7 +859,8 @@ class Game:
             "- Complete missions for bonuses",
             "- Manage police wanted level",
             "- Collect health/ammo pickups",
-            "- Drive vehicles to escape danger"
+            "- Drive vehicles to escape danger",
+            "- Now with 4K Images for Guns, Cars, Characters & More!"
         ]
         
         y = 300
