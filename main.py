@@ -29,6 +29,12 @@ YELLOW = (255, 255, 0)
 ORANGE = (255, 165, 0)
 CYAN = (0, 255, 255)
 LIGHT_GREEN = (144, 238, 144)
+LIGHT_GRAY = (192, 192, 192)
+DARK_GREEN = (34, 139, 34)
+PURPLE = (128, 0, 128)
+PINK = (255, 192, 203)
+BROWN = (165, 42, 42)
+LIGHT_BLUE = (173, 216, 230)
 
 # Asset paths
 ASSETS_DIR = Path("assets")
@@ -38,6 +44,7 @@ CAR_IMAGES_DIR = IMAGES_DIR / "cars"
 CHARACTER_IMAGES_DIR = IMAGES_DIR / "characters"
 POLICE_IMAGES_DIR = IMAGES_DIR / "police"
 PICKUP_IMAGES_DIR = IMAGES_DIR / "pickups"
+BG_IMAGES_DIR = IMAGES_DIR / "backgrounds"
 
 
 class ImageCache:
@@ -54,7 +61,7 @@ class ImageCache:
         
         try:
             if not os.path.exists(path):
-                # Return fallback colored surface
+                # Return fallback colored surface with gradient
                 surface = pygame.Surface((width or 40, height or 40))
                 surface.fill(fallback_color)
                 cls._cache[key] = surface
@@ -108,10 +115,18 @@ class Bullet(pygame.sprite.Sprite):
         self.age = 0
         self.owner_type = owner_type
         
-        self.width = 5
-        self.height = 5
+        self.width = 8
+        self.height = 8
         self.image = pygame.Surface((self.width, self.height))
-        self.image.fill(YELLOW if owner_type == "player" else RED)
+        
+        # Create better bullet appearance
+        if owner_type == "player":
+            pygame.draw.circle(self.image, YELLOW, (4, 4), 4)
+            pygame.draw.circle(self.image, WHITE, (4, 4), 2)
+        else:
+            pygame.draw.circle(self.image, RED, (4, 4), 4)
+            pygame.draw.circle(self.image, ORANGE, (4, 4), 2)
+        
         self.rect = self.image.get_rect(center=(x, y))
     
     def update(self):
@@ -134,10 +149,10 @@ class Pickup(pygame.sprite.Sprite):
         self.age = 0
         self.blink = True
         
-        self.width = 15
-        self.height = 15
+        self.width = 24
+        self.height = 24
         
-        # Try loading image, fallback to colored surface
+        # Try loading image, fallback to enhanced visual
         if pickup_type == "health":
             image_path = str(PICKUP_IMAGES_DIR / "health.png")
             fallback_color = LIGHT_GREEN
@@ -145,17 +160,32 @@ class Pickup(pygame.sprite.Sprite):
             image_path = str(PICKUP_IMAGES_DIR / "ammo.png")
             fallback_color = YELLOW
         
-        self.image = ImageCache.get_image(image_path, self.width, self.height, fallback_color)
+        self.base_image = ImageCache.get_image(image_path, self.width, self.height, fallback_color)
+        self.image = self.base_image.copy()
+        
+        # Create enhanced visual if no image
+        if self.base_image.get_at((0, 0))[:3] == fallback_color:
+            self.image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            if pickup_type == "health":
+                pygame.draw.circle(self.image, LIGHT_GREEN, (12, 12), 12)
+                pygame.draw.circle(self.image, RED, (12, 12), 10)
+                pygame.draw.line(self.image, WHITE, (12, 6), (12, 18), 2)
+                pygame.draw.line(self.image, WHITE, (6, 12), (18, 12), 2)
+            else:
+                pygame.draw.circle(self.image, YELLOW, (12, 12), 12)
+                pygame.draw.circle(self.image, ORANGE, (12, 12), 9)
+                pygame.draw.line(self.image, RED, (8, 12), (16, 12), 2)
+        
         self.rect = self.image.get_rect(center=(x, y))
     
     def update(self):
         self.age += 1
         self.blink = (self.age // 10) % 2 == 0
         
-        if not self.blink:
-            self.image.set_alpha(100)
-        else:
+        if self.blink:
             self.image.set_alpha(255)
+        else:
+            self.image.set_alpha(150)
     
     def is_alive(self):
         return self.age < self.lifetime
@@ -170,19 +200,19 @@ class Vehicle(pygame.sprite.Sprite):
         
         # Vehicle stats
         if vehicle_type == "car":
-            self.width, self.height = 40, 25
+            self.width, self.height = 50, 30
             self.max_health = 100
             self.speed = 8.0
             color = RED
             image_name = "car.png"
         elif vehicle_type == "truck":
-            self.width, self.height = 50, 30
+            self.width, self.height = 70, 40
             self.max_health = 150
             self.speed = 5.6
             color = ORANGE
             image_name = "truck.png"
         else:  # motorcycle
-            self.width, self.height = 35, 20
+            self.width, self.height = 40, 25
             self.max_health = 100
             self.speed = 10.4
             color = CYAN
@@ -190,6 +220,19 @@ class Vehicle(pygame.sprite.Sprite):
         
         image_path = str(CAR_IMAGES_DIR / image_name)
         self.base_image = ImageCache.get_image(image_path, self.width, self.height, color)
+        self.image = self.base_image.copy()
+        
+        # Create enhanced vehicle if no image
+        if self.base_image.get_at((0, 0))[:3] == color:
+            self.base_image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            pygame.draw.rect(self.base_image, color, (0, 0, self.width, self.height), border_radius=8)
+            pygame.draw.polygon(self.base_image, DARK_GRAY, [(self.width//4, self.height//3), 
+                                                              (3*self.width//4, self.height//3),
+                                                              (3*self.width//4, 2*self.height//3),
+                                                              (self.width//4, 2*self.height//3)])
+            pygame.draw.circle(self.base_image, BLACK, (self.width//3, self.height), 4)
+            pygame.draw.circle(self.base_image, BLACK, (2*self.width//3, self.height), 4)
+        
         self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
@@ -234,12 +277,28 @@ class NPC(pygame.sprite.Sprite):
         super().__init__()
         self.x = x
         self.y = y
-        self.width = 18
-        self.height = 18
+        self.width = 24
+        self.height = 24
         
         # Load NPC character image
         image_path = str(CHARACTER_IMAGES_DIR / "civilian.png")
-        self.image = ImageCache.get_image(image_path, self.width, self.height, GREEN)
+        self.base_image = ImageCache.get_image(image_path, self.width, self.height, GREEN)
+        
+        # Create enhanced character if no image
+        if self.base_image.get_at((0, 0))[:3] == GREEN:
+            self.base_image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            # Head
+            pygame.draw.circle(self.base_image, PINK, (self.width//2, self.height//4), 6)
+            # Body
+            pygame.draw.rect(self.base_image, GREEN, (self.width//3, self.height//3, self.width//3, self.height//2))
+            # Arms
+            pygame.draw.line(self.base_image, PINK, (self.width//3, self.height//2), (2, self.height//2), 3)
+            pygame.draw.line(self.base_image, PINK, (2*self.width//3, self.height//2), (self.width-2, self.height//2), 3)
+            # Legs
+            pygame.draw.line(self.base_image, BROWN, (5*self.width//12, 5*self.height//6), (5*self.width//12, self.height), 3)
+            pygame.draw.line(self.base_image, BROWN, (7*self.width//12, 5*self.height//6), (7*self.width//12, self.height), 3)
+        
+        self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
         self.vx = 0
@@ -306,12 +365,22 @@ class Police(pygame.sprite.Sprite):
         super().__init__()
         self.x = x
         self.y = y
-        self.width = 45
-        self.height = 25
+        self.width = 50
+        self.height = 30
         
         # Load police car/officer image
         image_path = str(POLICE_IMAGES_DIR / "police.png")
         self.base_image = ImageCache.get_image(image_path, self.width, self.height, DARK_BLUE)
+        
+        # Create enhanced police car if no image
+        if self.base_image.get_at((0, 0))[:3] == DARK_BLUE:
+            self.base_image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            pygame.draw.rect(self.base_image, DARK_BLUE, (0, 0, self.width, self.height), border_radius=8)
+            pygame.draw.rect(self.base_image, RED, (self.width//4, 5, self.width//2, 10), border_radius=4)
+            pygame.draw.circle(self.base_image, CYAN, (self.width//3, self.height), 5)
+            pygame.draw.circle(self.base_image, CYAN, (2*self.width//3, self.height), 5)
+            pygame.draw.line(self.base_image, WHITE, (10, 12), (self.width-10, 12), 2)
+        
         self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
@@ -377,12 +446,27 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
         self.x = x
         self.y = y
-        self.width = 20
-        self.height = 20
+        self.width = 28
+        self.height = 28
         
         # Load player character image
         image_path = str(CHARACTER_IMAGES_DIR / "player.png")
         self.base_image = ImageCache.get_image(image_path, self.width, self.height, BLUE)
+        
+        # Create enhanced player character if no image
+        if self.base_image.get_at((0, 0))[:3] == BLUE:
+            self.base_image = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+            # Head
+            pygame.draw.circle(self.base_image, YELLOW, (self.width//2, self.height//4), 7)
+            # Body
+            pygame.draw.rect(self.base_image, BLUE, (self.width//3-2, self.height//3, self.width//3+4, self.height//2), border_radius=4)
+            # Arms
+            pygame.draw.line(self.base_image, YELLOW, (self.width//3, self.height//2), (2, self.height//2+2), 4)
+            pygame.draw.line(self.base_image, YELLOW, (2*self.width//3, self.height//2), (self.width-2, self.height//2+2), 4)
+            # Legs
+            pygame.draw.line(self.base_image, BROWN, (5*self.width//12, 5*self.height//6), (5*self.width//12, self.height), 4)
+            pygame.draw.line(self.base_image, BROWN, (7*self.width//12, 5*self.height//6), (7*self.width//12, self.height), 4)
+        
         self.image = self.base_image.copy()
         self.rect = self.image.get_rect(center=(x, y))
         
@@ -545,7 +629,7 @@ class Mission:
 class Game:
     def __init__(self):
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Mini GTA - Complete Edition with 4K Assets")
+        pygame.display.set_caption("Mini GTA - 4K Enhanced Edition with Beautiful Graphics")
         self.clock = pygame.time.Clock()
         self.running = True
         self.state = GameState.MENU
@@ -556,7 +640,51 @@ class Game:
         self.camera_x = 0
         self.camera_y = 0
         
+        # Load background
+        self.background = self.create_background()
+        
         self.init_game()
+    
+    def create_background(self):
+        """Create an enhanced 4K-style background"""
+        background = pygame.Surface((self.world_width, self.world_height))
+        
+        # Create gradient-like background
+        for y in range(self.world_height):
+            color_factor = int((y / self.world_height) * 50)
+            color = (100 + color_factor, 150 + color_factor, 100 + color_factor)
+            pygame.draw.line(background, color, (0, y), (self.world_width, y))
+        
+        # Add roads/paths
+        # Horizontal road
+        pygame.draw.rect(background, (100, 100, 100), (0, self.world_height//2 - 40, self.world_width, 80))
+        # Vertical road
+        pygame.draw.rect(background, (100, 100, 100), (self.world_width//2 - 40, 0, 80, self.world_height))
+        
+        # Road markings
+        for i in range(0, self.world_width, 100):
+            pygame.draw.line(background, YELLOW, (i, self.world_height//2), (i + 50, self.world_height//2), 2)
+        
+        for i in range(0, self.world_height, 100):
+            pygame.draw.line(background, YELLOW, (self.world_width//2, i), (self.world_width//2, i + 50), 2)
+        
+        # Add buildings/areas
+        for i in range(0, self.world_width, 400):
+            for j in range(0, self.world_height, 400):
+                if abs(i - self.world_width//2) > 100 or abs(j - self.world_height//2) > 100:
+                    color = random.choice([LIGHT_GRAY, LIGHT_BLUE, PINK])
+                    pygame.draw.rect(background, color, (i, j, 300, 300), border_radius=10)
+                    pygame.draw.rect(background, GRAY, (i, j, 300, 300), 3, border_radius=10)
+        
+        # Add trees/vegetation
+        for _ in range(100):
+            x = random.randint(0, self.world_width)
+            y = random.randint(0, self.world_height)
+            if abs(x - self.world_width//2) > 150 or abs(y - self.world_height//2) > 150:
+                pygame.draw.circle(background, DARK_GREEN, (x, y), 15)
+                pygame.draw.rect(background, BROWN, (x-3, y, 6, 20))
+        
+        return background
     
     def init_game(self):
         self.player = Player(500, 500)
@@ -846,16 +974,22 @@ class Game:
         pygame.display.flip()
     
     def draw_menu(self):
+        # Draw gradient background
+        for y in range(SCREEN_HEIGHT):
+            color_factor = int((y / SCREEN_HEIGHT) * 100)
+            color = (50 + color_factor, 100 + color_factor, 200 + color_factor)
+            pygame.draw.line(self.screen, color, (0, y), (SCREEN_WIDTH, y))
+        
         font_title = pygame.font.Font(None, 80)
         font_subtitle = pygame.font.Font(None, 40)
         font_normal = pygame.font.Font(None, 30)
         
         title = font_title.render("MINI GTA", True, RED)
-        subtitle = font_subtitle.render("Open World Action Game - 4K Assets", True, YELLOW)
+        subtitle = font_subtitle.render("4K Enhanced Edition", True, YELLOW)
         start = font_normal.render("Press SPACE to Start", True, WHITE)
         
-        self.screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 100))
-        self.screen.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 200))
+        self.screen.blit(title, (SCREEN_WIDTH // 2 - title.get_width() // 2, 80))
+        self.screen.blit(subtitle, (SCREEN_WIDTH // 2 - subtitle.get_width() // 2, 180))
         
         # Controls
         font_small = pygame.font.Font(None, 20)
@@ -872,7 +1006,7 @@ class Game:
             "- Manage police wanted level",
             "- Collect health/ammo pickups",
             "- Drive vehicles to escape danger",
-            "- Now with 4K Images for Guns, Cars, Characters & More!"
+            "- Beautiful 4K Graphics with Enhanced Characters & Vehicles!"
         ]
         
         y = 300
@@ -935,43 +1069,37 @@ class Game:
         self.screen.blit(restart, (SCREEN_WIDTH // 2 - restart.get_width() // 2, SCREEN_HEIGHT - 100))
     
     def draw_game(self):
-        # Draw grid
-        for x in range(0, self.world_width, 100):
-            sx = x - self.camera_x
-            if 0 <= sx < SCREEN_WIDTH:
-                pygame.draw.line(self.screen, GRAY, (sx, 0), (sx, SCREEN_HEIGHT), 1)
-        
-        for y in range(0, self.world_height, 100):
-            sy = y - self.camera_y
-            if 0 <= sy < SCREEN_HEIGHT:
-                pygame.draw.line(self.screen, GRAY, (0, sy), (SCREEN_WIDTH, sy), 1)
+        # Draw background with camera offset
+        self.screen.blit(self.background, (-self.camera_x, -self.camera_y))
         
         # Draw vehicles
         for vehicle in self.vehicles:
             sx = vehicle.x - self.camera_x
             sy = vehicle.y - self.camera_y
-            if -50 < sx < SCREEN_WIDTH + 50 and -50 < sy < SCREEN_HEIGHT + 50:
+            if -100 < sx < SCREEN_WIDTH + 100 and -100 < sy < SCREEN_HEIGHT + 100:
                 self.screen.blit(vehicle.image, (sx - vehicle.rect.width // 2, sy - vehicle.rect.height // 2))
                 
                 if vehicle.health < vehicle.max_health:
-                    bar_width = 40
-                    bar_height = 4
+                    bar_width = 50
+                    bar_height = 5
                     health_ratio = vehicle.health / vehicle.max_health
-                    pygame.draw.rect(self.screen, RED, (sx - bar_width // 2, sy - 25, bar_width, bar_height))
-                    pygame.draw.rect(self.screen, GREEN, (sx - bar_width // 2, sy - 25, bar_width * health_ratio, bar_height))
+                    pygame.draw.rect(self.screen, RED, (sx - bar_width // 2, sy - 30, bar_width, bar_height))
+                    pygame.draw.rect(self.screen, GREEN, (sx - bar_width // 2, sy - 30, bar_width * health_ratio, bar_height))
+                    pygame.draw.rect(self.screen, WHITE, (sx - bar_width // 2, sy - 30, bar_width, bar_height), 2)
         
         # Draw police
         for police_unit in self.police:
             sx = police_unit.x - self.camera_x
             sy = police_unit.y - self.camera_y
-            if -50 < sx < SCREEN_WIDTH + 50 and -50 < sy < SCREEN_HEIGHT + 50:
+            if -100 < sx < SCREEN_WIDTH + 100 and -100 < sy < SCREEN_HEIGHT + 100:
                 self.screen.blit(police_unit.image, (sx - police_unit.rect.width // 2, sy - police_unit.rect.height // 2))
                 
-                bar_width = 40
-                bar_height = 4
+                bar_width = 50
+                bar_height = 5
                 health_ratio = police_unit.health / police_unit.max_health
                 pygame.draw.rect(self.screen, RED, (sx - bar_width // 2, sy - 30, bar_width, bar_height))
                 pygame.draw.rect(self.screen, GREEN, (sx - bar_width // 2, sy - 30, bar_width * health_ratio, bar_height))
+                pygame.draw.rect(self.screen, WHITE, (sx - bar_width // 2, sy - 30, bar_width, bar_height), 2)
         
         # Draw NPCs
         for npc in self.npcs:
@@ -981,30 +1109,40 @@ class Game:
                 self.screen.blit(npc.image, (sx - npc.width // 2, sy - npc.height // 2))
                 
                 if npc.health < npc.max_health:
-                    bar_width = 20
-                    bar_height = 3
+                    bar_width = 25
+                    bar_height = 4
                     health_ratio = npc.health / npc.max_health
-                    pygame.draw.rect(self.screen, RED, (sx - bar_width // 2, sy - 15, bar_width, bar_height))
-                    pygame.draw.rect(self.screen, GREEN, (sx - bar_width // 2, sy - 15, bar_width * health_ratio, bar_height))
+                    pygame.draw.rect(self.screen, RED, (sx - bar_width // 2, sy - 20, bar_width, bar_height))
+                    pygame.draw.rect(self.screen, GREEN, (sx - bar_width // 2, sy - 20, bar_width * health_ratio, bar_height))
         
         # Draw pickups
         for pickup in self.pickups:
             sx = pickup.x - self.camera_x
             sy = pickup.y - self.camera_y
-            if -20 < sx < SCREEN_WIDTH + 20 and -20 < sy < SCREEN_HEIGHT + 20:
+            if -30 < sx < SCREEN_WIDTH + 30 and -30 < sy < SCREEN_HEIGHT + 30:
                 self.screen.blit(pickup.image, (sx - pickup.width // 2, sy - pickup.height // 2))
+                # Draw glow effect
+                pygame.draw.circle(self.screen, (pickup.image.get_at((12, 12))[:3] if pickup.image.get_at((12, 12))[3] > 0 else YELLOW), 
+                                   (int(sx), int(sy)), 30, 1)
         
         # Draw player
         sx = self.player.x - self.camera_x
         sy = self.player.y - self.camera_y
         self.screen.blit(self.player.image, (sx - self.player.rect.width // 2, sy - self.player.rect.height // 2))
         
-        # Draw bullets
+        # Draw player glow
+        pygame.draw.circle(self.screen, CYAN, (int(sx), int(sy)), 35, 2)
+        
+        # Draw bullets with trails
         for bullet in self.bullets:
             sx = bullet.x - self.camera_x
             sy = bullet.y - self.camera_y
-            if -10 < sx < SCREEN_WIDTH + 10 and -10 < sy < SCREEN_HEIGHT + 10:
-                pygame.draw.circle(self.screen, bullet.image.get_at((0, 0)), (int(sx), int(sy)), 3)
+            if -20 < sx < SCREEN_WIDTH + 20 and -20 < sy < SCREEN_HEIGHT + 20:
+                pygame.draw.circle(self.screen, bullet.image.get_at((4, 4)), (int(sx), int(sy)), 5)
+                # Add trail effect
+                prev_x = sx - math.cos(bullet.angle) * 10
+                prev_y = sy - math.sin(bullet.angle) * 10
+                pygame.draw.line(self.screen, bullet.image.get_at((4, 4)), (int(sx), int(sy)), (int(prev_x), int(prev_y)), 2)
         
         # Draw HUD
         self.draw_hud()
@@ -1013,29 +1151,34 @@ class Game:
         font_small = pygame.font.Font(None, 24)
         font_large = pygame.font.Font(None, 32)
         
+        # Create semi-transparent HUD background
+        hud_bg = pygame.Surface((1200, 200), pygame.SRCALPHA)
+        pygame.draw.rect(hud_bg, (0, 0, 0, 150), (0, 0, 1200, 200), border_radius=10)
+        self.screen.blit(hud_bg, (10, 10))
+        
         # Left side stats
         health_text = font_small.render(f"Health: {int(self.player.health)}/{int(self.player.max_health)}", True, WHITE)
-        self.screen.blit(health_text, (10, 10))
+        self.screen.blit(health_text, (20, 20))
         
         weapon = self.player.weapons[self.player.current_weapon]
         ammo_text = font_small.render(f"{weapon.name}: {weapon.ammo}/{weapon.max_ammo}", True, YELLOW)
-        self.screen.blit(ammo_text, (10, 35))
+        self.screen.blit(ammo_text, (20, 50))
         
         money_text = font_small.render(f"Money: ${self.player.money}", True, YELLOW)
-        self.screen.blit(money_text, (10, 60))
+        self.screen.blit(money_text, (20, 80))
         
-        wanted_text = font_small.render(f"Wanted: {'*' * int(self.player.wanted_level)}", True, RED)
-        self.screen.blit(wanted_text, (10, 85))
+        wanted_text = font_small.render(f"Wanted: {'★' * int(self.player.wanted_level)}", True, RED)
+        self.screen.blit(wanted_text, (20, 110))
         
         npcs_text = font_small.render(f"NPCs: {len(self.npcs)} | Police: {len(self.police)}", True, GREEN)
-        self.screen.blit(npcs_text, (10, 110))
+        self.screen.blit(npcs_text, (20, 140))
         
         accuracy_text = font_small.render(f"Accuracy: {self.player.get_accuracy():.1f}%", True, CYAN)
-        self.screen.blit(accuracy_text, (10, 135))
+        self.screen.blit(accuracy_text, (20, 170))
         
         # Right side missions
         missions_title = font_large.render("MISSIONS", True, YELLOW)
-        self.screen.blit(missions_title, (SCREEN_WIDTH - 300, 10))
+        self.screen.blit(missions_title, (SCREEN_WIDTH - 310, 10))
         
         y = 50
         for i, mission in enumerate(self.missions):
@@ -1053,7 +1196,7 @@ class Game:
         font_tiny = pygame.font.Font(None, 18)
         instructions = "WASD:Move | 1,2,3:Weapon | E:Vehicle | Click:Shoot | ESC:Menu"
         instr_text = font_tiny.render(instructions, True, GRAY)
-        self.screen.blit(instr_text, (10, SCREEN_HEIGHT - 25))
+        self.screen.blit(instr_text, (SCREEN_WIDTH // 2 - instr_text.get_width() // 2, SCREEN_HEIGHT - 25))
     
     def run(self):
         while self.running:
