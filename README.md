@@ -62,6 +62,8 @@ A fully-featured GTA-style open world action game built with Pygame featuring ve
 
 ## 🚀 Installation
 
+### Quick Start (Desktop)
+
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -69,6 +71,14 @@ pip install -r requirements.txt
 # Run the game
 python main.py
 ```
+
+### Requirements
+
+- Python 3.8+
+- Pygame 2.5.2+
+- NumPy
+
+See [requirements.txt](requirements.txt) for full list.
 
 ---
 
@@ -182,10 +192,16 @@ Pickups disappear after 10 seconds if not collected
 
 ```
 Mini-GTA/
-├── main.py           # Complete game code (1400+ lines)
-├── requirements.txt  # Python dependencies
-├── README.md        # This file
-└── highscore.json   # Auto-generated high scores
+├── main.py                    # Complete game code (1400+ lines)
+├── requirements.txt           # Python dependencies
+├── README.md                  # This file
+├── play.html                  # Web interface & landing page
+├── LICENSE                    # MIT License
+├── PRIVACY_POLICY.md          # Privacy policy for app stores
+├── PLAYSTORE_DEPLOYMENT.md    # Google Play Store guide
+├── DEPLOYMENT_CHECKLIST.md    # Pre-launch checklist
+├── buildozer.spec             # Buildozer configuration
+└── highscore.json             # Auto-generated high scores
 ```
 
 ---
@@ -218,6 +234,7 @@ This game demonstrates:
 **Game won't start?**
 - Ensure pygame is installed: `pip install pygame==2.5.2`
 - Run from the repository directory
+- Check Python version: 3.8+
 
 **Can't find pickups?**
 - Yellow = ammo, Green = health
@@ -227,6 +244,40 @@ This game demonstrates:
 **Performance issues?**
 - Reduce NPC count in `init_game()` method
 - Lower FPS from 60 to 30 if needed
+- Close other applications
+
+---
+
+## 📱 Android & Google Play Store
+
+### Deploy to Google Play Store
+
+Mini GTA can be packaged as an Android app and published to the Google Play Store!
+
+**Quick Start:**
+1. Review [PLAYSTORE_DEPLOYMENT.md](PLAYSTORE_DEPLOYMENT.md) for detailed guide
+2. Follow [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) before submission
+3. Use provided [buildozer.spec](buildozer.spec) configuration
+
+**Requirements:**
+- Buildozer and Kivy installed
+- Java Development Kit (JDK)
+- Android SDK
+- Google Play Developer account ($25 fee)
+
+**Build Commands:**
+```bash
+# Install tools
+pip install kivy buildozer
+
+# Debug build
+buildozer -v android debug
+
+# Release build for Play Store
+buildozer -v android release
+```
+
+See [PLAYSTORE_DEPLOYMENT.md](PLAYSTORE_DEPLOYMENT.md) for complete instructions.
 
 ---
 
@@ -250,3 +301,50 @@ You now have a complete, fully playable GTA-style game! Have fun exploring the o
 - 📊 **High Score System**
 - ⏸️ **Pause/Resume**
 - 🎮 **Full Menu System**
+- 📱 **Android Ready** (Google Play Store)
+
+---
+
+## 📜 License & Copyright
+
+**© 2025 Mohammad Aqdas Alvi (mohammadaqdasalvi27jul2011-glitch)**
+
+This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+
+### License Summary:
+- ✅ **Free to use** - Personal and educational purposes
+- ✅ **Free to modify** - Create your own versions
+- ✅ **Free to distribute** - Share with others
+- ⚠️ **Attribution required** - Please credit the original author
+- ⚠️ **No warranty** - Use at your own risk
+
+### Citation:
+If you use this project in your work, please cite it as:
+```
+Mini GTA - Open World Action Game
+Author: Mohammad Aqdas Alvi
+URL: https://github.com/mohammadaqdasalvi27jul2011-glitch/Mini-GTA
+Year: 2025
+License: MIT
+```
+
+### Important Links:
+- 🔗 **Repository:** https://github.com/mohammadaqdasalvi27jul2011-glitch/Mini-GTA
+- 📄 **License:** https://github.com/mohammadaqdasalvi27jul2011-glitch/Mini-GTA/blob/main/LICENSE
+- 🔐 **Privacy Policy:** https://github.com/mohammadaqdasalvi27jul2011-glitch/Mini-GTA/blob/main/PRIVACY_POLICY.md
+- 📱 **Play Store Guide:** https://github.com/mohammadaqdasalvi27jul2011-glitch/Mini-GTA/blob/main/PLAYSTORE_DEPLOYMENT.md
+- ✅ **Deployment Checklist:** https://github.com/mohammadaqdasalvi27jul2011-glitch/Mini-GTA/blob/main/DEPLOYMENT_CHECKLIST.md
+
+---
+
+## 👤 Author
+
+**Mohammad Aqdas Alvi**
+- GitHub: [@mohammadaqdasalvi27jul2011-glitch](https://github.com/mohammadaqdasalvi27jul2011-glitch)
+- Email: mohammadaqdasalvi27jul2011@gmail.com
+
+---
+
+**Made with ❤️ using Python & Pygame**
+
+Join thousands of players experiencing the complete Mini GTA action game! 🎮🚗💥
