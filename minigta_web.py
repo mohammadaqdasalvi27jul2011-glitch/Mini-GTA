@@ -1,6 +1,7 @@
 """
-Mini GTA - 4K Web Edition
+Mini GTA - 4K Web Edition (ENHANCED)
 HTML to Python conversion - Web-based GTA-style game
+Fixed and fully playable version
 """
 
 HTML_CONTENT = """<!DOCTYPE html>
@@ -129,10 +130,11 @@ HTML_CONTENT = """<!DOCTYPE html>
             font-family: 'Courier New', monospace;
             font-size: 14px;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px;
             border: 2px solid #00ff00;
             border-radius: 5px;
+            min-width: 200px;
         }
 
         .hud-line {
@@ -156,11 +158,12 @@ HTML_CONTENT = """<!DOCTYPE html>
             font-family: 'Courier New', monospace;
             font-size: 14px;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px;
             border: 2px solid #00ff00;
             border-radius: 5px;
             text-align: right;
+            min-width: 150px;
         }
 
         .bottom-hud {
@@ -171,10 +174,11 @@ HTML_CONTENT = """<!DOCTYPE html>
             font-family: 'Courier New', monospace;
             font-size: 12px;
             z-index: 100;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 10px;
             border: 2px solid #00ff00;
             border-radius: 5px;
+            max-width: 600px;
         }
 
         .game-over-overlay {
@@ -325,7 +329,7 @@ HTML_CONTENT = """<!DOCTYPE html>
         <div class="pause-content">
             <h1>⏸️ PAUSED</h1>
             <p>Press ESC to Resume</p>
-            <p style="font-size: 14px; color: #888;">or click outside to continue</p>
+            <p style="font-size: 14px; color: #888;">or click ESC again to continue</p>
         </div>
     </div>
 
@@ -360,10 +364,12 @@ HTML_CONTENT = """<!DOCTYPE html>
     </div>
 
     <div class="bottom-hud">
-        <div style="color: #ffff00;">CONTROLS: WASD=Move | Mouse=Aim | Click=Shoot | 1/2/3=Weapons | E=Vehicle | ESC=Pause</div>
+        <div style="color: #ffff00; line-height: 1.5;">CONTROLS: WASD=Move | Mouse=Aim | Click=Shoot | 1/2/3=Weapons | E=Vehicle | ESC=Pause | SPACE=Start</div>
     </div>
 
     <script>
+        'use strict';
+        
         const gameInstance = {
             // Canvas
             canvas: null,
@@ -428,92 +434,108 @@ HTML_CONTENT = """<!DOCTYPE html>
 
             // Initialize Game
             init() {
-                this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d', { alpha: false });
-                
-                // Set canvas resolution
-                this.width = window.innerWidth * (window.devicePixelRatio || 1);
-                this.height = window.innerHeight * (window.devicePixelRatio || 1);
-                
-                this.canvas.width = this.width;
-                this.canvas.height = this.height;
-                
-                // Set display size
-                this.canvas.style.width = window.innerWidth + 'px';
-                this.canvas.style.height = window.innerHeight + 'px';
+                try {
+                    this.canvas = document.getElementById('gameCanvas');
+                    if (!this.canvas) {
+                        console.error('Canvas not found');
+                        return;
+                    }
+                    
+                    this.ctx = this.canvas.getContext('2d', { alpha: false });
+                    if (!this.ctx) {
+                        console.error('2D context not available');
+                        return;
+                    }
+                    
+                    // Set canvas resolution
+                    this.width = window.innerWidth * (window.devicePixelRatio || 1);
+                    this.height = window.innerHeight * (window.devicePixelRatio || 1);
+                    
+                    this.canvas.width = this.width;
+                    this.canvas.height = this.height;
+                    
+                    // Set display size
+                    this.canvas.style.width = window.innerWidth + 'px';
+                    this.canvas.style.height = window.innerHeight + 'px';
 
-                this.setupEventListeners();
-                this.spawnInitialEntities();
-                this.gameLoop();
+                    this.setupEventListeners();
+                    this.spawnInitialEntities();
+                    this.gameLoop();
+                    console.log('Game initialized successfully');
+                } catch(e) {
+                    console.error('Init error:', e);
+                }
             },
 
             setupEventListeners() {
+                const self = this;
+                
                 document.addEventListener('keydown', (e) => {
-                    this.keys[e.key.toLowerCase()] = true;
+                    self.keys[e.key.toLowerCase()] = true;
                     
                     if (e.key === ' ') {
                         e.preventDefault();
-                        if (this.gameState === 'menu') this.startGame();
+                        if (self.gameState === 'menu') self.startGame();
                     }
                     
                     if (e.key === 'Escape') {
                         e.preventDefault();
-                        this.togglePause();
+                        self.togglePause();
                     }
                     
-                    if (e.key === '1') this.player.weapon = 'pistol';
-                    if (e.key === '2') this.player.weapon = 'rifle';
-                    if (e.key === '3') this.player.weapon = 'shotgun';
+                    if (e.key === '1') self.player.weapon = 'pistol';
+                    if (e.key === '2') self.player.weapon = 'rifle';
+                    if (e.key === '3') self.player.weapon = 'shotgun';
                     
-                    if (e.key.toLowerCase() === 'e') this.toggleVehicle();
+                    if (e.key.toLowerCase() === 'e') self.toggleVehicle();
                 });
 
                 document.addEventListener('keyup', (e) => {
-                    this.keys[e.key.toLowerCase()] = false;
+                    self.keys[e.key.toLowerCase()] = false;
                 });
 
                 document.addEventListener('mousemove', (e) => {
-                    const rect = this.canvas.getBoundingClientRect();
-                    this.mouse.x = (e.clientX - rect.left) * (this.width / rect.width);
-                    this.mouse.y = (e.clientY - rect.top) * (this.height / rect.height);
+                    const rect = self.canvas.getBoundingClientRect();
+                    self.mouse.x = (e.clientX - rect.left) * (self.width / rect.width);
+                    self.mouse.y = (e.clientY - rect.top) * (self.height / rect.height);
                     
-                    this.player.mouseX = this.mouse.x + this.cameraX;
-                    this.player.mouseY = this.mouse.y + this.cameraY;
+                    self.player.mouseX = self.mouse.x + self.cameraX;
+                    self.player.mouseY = self.mouse.y + self.cameraY;
                     
-                    const dx = this.player.mouseX - this.player.x;
-                    const dy = this.player.mouseY - this.player.y;
-                    this.player.angle = Math.atan2(dy, dx);
+                    const dx = self.player.mouseX - self.player.x;
+                    const dy = self.player.mouseY - self.player.y;
+                    self.player.angle = Math.atan2(dy, dx);
                 });
 
                 document.addEventListener('click', () => {
-                    if (this.gameState === 'playing') {
-                        this.shoot();
+                    if (self.gameState === 'playing') {
+                        self.shoot();
                     }
                 });
 
                 window.addEventListener('resize', () => {
-                    this.width = window.innerWidth * (window.devicePixelRatio || 1);
-                    this.height = window.innerHeight * (window.devicePixelRatio || 1);
-                    this.canvas.width = this.width;
-                    this.canvas.height = this.height;
-                    this.canvas.style.width = window.innerWidth + 'px';
-                    this.canvas.style.height = window.innerHeight + 'px';
+                    self.width = window.innerWidth * (window.devicePixelRatio || 1);
+                    self.height = window.innerHeight * (window.devicePixelRatio || 1);
+                    self.canvas.width = self.width;
+                    self.canvas.height = self.height;
+                    self.canvas.style.width = window.innerWidth + 'px';
+                    self.canvas.style.height = window.innerHeight + 'px';
                 });
             },
 
             spawnInitialEntities() {
                 // Spawn enemies
-                for (let i = 0; i < 20; i++) {
+                for (let i = 0; i < 15; i++) {
                     this.npcs.push(this.createNPC());
                 }
 
                 // Spawn vehicles
-                for (let i = 0; i < 8; i++) {
+                for (let i = 0; i < 6; i++) {
                     this.vehicles.push(this.createVehicle());
                 }
 
                 // Spawn pickups
-                for (let i = 0; i < 15; i++) {
+                for (let i = 0; i < 10; i++) {
                     this.pickups.push(this.createPickup());
                 }
             },
@@ -569,7 +591,9 @@ HTML_CONTENT = """<!DOCTYPE html>
                     x: Math.random() * this.worldWidth,
                     y: Math.random() * this.worldHeight,
                     type: Math.random() > 0.5 ? 'health' : 'ammo',
-                    size: 12
+                    size: 12,
+                    lifetime: 300,
+                    age: 0
                 };
             },
 
@@ -577,16 +601,19 @@ HTML_CONTENT = """<!DOCTYPE html>
                 this.gameState = 'playing';
                 this.running = true;
                 this.startTime = Date.now();
-                document.getElementById('menuOverlay').classList.add('hidden');
+                const menuOverlay = document.getElementById('menuOverlay');
+                if (menuOverlay) menuOverlay.classList.add('hidden');
             },
 
             togglePause() {
                 if (this.gameState === 'playing') {
                     this.gameState = 'paused';
-                    document.getElementById('pauseOverlay').classList.remove('hidden');
+                    const pauseOverlay = document.getElementById('pauseOverlay');
+                    if (pauseOverlay) pauseOverlay.classList.remove('hidden');
                 } else if (this.gameState === 'paused') {
                     this.gameState = 'playing';
-                    document.getElementById('pauseOverlay').classList.add('hidden');
+                    const pauseOverlay = document.getElementById('pauseOverlay');
+                    if (pauseOverlay) pauseOverlay.classList.add('hidden');
                 }
             },
 
@@ -719,12 +746,16 @@ HTML_CONTENT = """<!DOCTYPE html>
                                         x: npc.x,
                                         y: npc.y,
                                         type: Math.random() > 0.6 ? 'ammo' : 'health',
-                                        size: 12
+                                        size: 12,
+                                        lifetime: 300,
+                                        age: 0
                                     });
                                 }
                             }
 
-                            this.bullets.splice(i, 1);
+                            if (this.bullets.indexOf(b) !== -1) {
+                                this.bullets.splice(i, 1);
+                            }
                             break;
                         }
                     }
@@ -748,8 +779,8 @@ HTML_CONTENT = """<!DOCTYPE html>
                     // Collision with player
                     const dist = Math.hypot(this.player.x - npc.x, this.player.y - npc.y);
                     if (dist < 40) {
-                        this.player.health -= 0.5;
-                        this.player.wanted += 0.1;
+                        this.player.health -= 0.3;
+                        this.player.wanted += 0.05;
                     }
                 }
 
@@ -771,6 +802,13 @@ HTML_CONTENT = """<!DOCTYPE html>
                 // Update pickups
                 for (let i = this.pickups.length - 1; i >= 0; i--) {
                     const p = this.pickups[i];
+                    p.age++;
+                    
+                    if (p.age > p.lifetime) {
+                        this.pickups.splice(i, 1);
+                        continue;
+                    }
+                    
                     const dist = Math.hypot(this.player.x - p.x, this.player.y - p.y);
                     if (dist < 40) {
                         if (p.type === 'health') {
@@ -792,12 +830,12 @@ HTML_CONTENT = """<!DOCTYPE html>
                 }
 
                 // Spawn more enemies if needed
-                if (this.npcs.length < 10 + this.wave * 5) {
+                if (this.npcs.length < 10 + this.wave * 3) {
                     this.npcs.push(this.createNPC());
                 }
 
                 // Spawn pickups
-                if (this.pickups.length < 10) {
+                if (this.pickups.length < 8) {
                     this.pickups.push(this.createPickup());
                 }
 
@@ -807,7 +845,7 @@ HTML_CONTENT = """<!DOCTYPE html>
                 }
 
                 // Wave progression
-                if (this.player.kills > this.wave * 20) {
+                if (this.player.kills > this.wave * 15) {
                     this.wave++;
                 }
             },
@@ -940,19 +978,23 @@ HTML_CONTENT = """<!DOCTYPE html>
             },
 
             updateHUD() {
-                document.getElementById('hudHealth').textContent = Math.floor(this.player.health);
-                document.getElementById('hudMoney').textContent = this.player.money;
-                document.getElementById('hudAmmo').textContent = this.player.ammo;
-                document.getElementById('hudMaxAmmo').textContent = this.player.maxAmmo;
-                document.getElementById('hudWeapon').textContent = this.player.weapon.toUpperCase();
-                document.getElementById('hudKills').textContent = this.player.kills;
-                document.getElementById('hudWave').textContent = this.wave;
-                
-                const stars = '★'.repeat(Math.min(5, Math.floor(this.player.wanted))) + 
-                             '☆'.repeat(Math.max(0, 5 - Math.floor(this.player.wanted)));
-                document.getElementById('hudWanted').textContent = stars;
-                
-                document.getElementById('hudScore').textContent = this.score;
+                try {
+                    document.getElementById('hudHealth').textContent = Math.max(0, Math.floor(this.player.health));
+                    document.getElementById('hudMoney').textContent = this.player.money;
+                    document.getElementById('hudAmmo').textContent = Math.max(0, this.player.ammo);
+                    document.getElementById('hudMaxAmmo').textContent = this.player.maxAmmo;
+                    document.getElementById('hudWeapon').textContent = this.player.weapon.toUpperCase();
+                    document.getElementById('hudKills').textContent = this.player.kills;
+                    document.getElementById('hudWave').textContent = this.wave;
+                    
+                    const stars = '★'.repeat(Math.min(5, Math.floor(this.player.wanted))) + 
+                                 '☆'.repeat(Math.max(0, 5 - Math.floor(this.player.wanted)));
+                    document.getElementById('hudWanted').textContent = stars;
+                    
+                    document.getElementById('hudScore').textContent = this.score;
+                } catch(e) {
+                    console.error('HUD update error:', e);
+                }
             },
 
             endGame() {
@@ -963,25 +1005,34 @@ HTML_CONTENT = """<!DOCTYPE html>
                 const accuracy = this.player.shotsFired > 0 ? 
                     Math.floor((this.player.shotsHit / this.player.shotsFired) * 100) : 0;
                 
-                document.getElementById('finalMoney').textContent = this.player.money;
-                document.getElementById('finalKills').textContent = this.player.kills;
-                document.getElementById('finalAccuracy').textContent = accuracy;
-                document.getElementById('finalTime').textContent = survivalTime;
-                document.getElementById('finalWave').textContent = this.wave;
-                
-                document.getElementById('gameOverOverlay').classList.remove('hidden');
+                try {
+                    document.getElementById('finalMoney').textContent = this.player.money;
+                    document.getElementById('finalKills').textContent = this.player.kills;
+                    document.getElementById('finalAccuracy').textContent = accuracy;
+                    document.getElementById('finalTime').textContent = survivalTime;
+                    document.getElementById('finalWave').textContent = this.wave;
+                    
+                    document.getElementById('gameOverOverlay').classList.remove('hidden');
+                } catch(e) {
+                    console.error('End game error:', e);
+                }
             },
 
             gameLoop() {
-                this.update();
-                this.draw();
-                this.updateHUD();
+                try {
+                    this.update();
+                    this.draw();
+                    this.updateHUD();
+                } catch(e) {
+                    console.error('Game loop error:', e);
+                }
                 requestAnimationFrame(() => this.gameLoop());
             }
         };
 
         // Start game when page loads
         window.addEventListener('load', () => {
+            console.log('Page loaded, initializing game...');
             gameInstance.init();
         });
     </script>
@@ -999,26 +1050,45 @@ def serve_minigta(port=8001):
     Requires http.server (built-in Python module)
     """
     from http.server import HTTPServer, BaseHTTPRequestHandler
+    import os
     
     class MiniGTAHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            if self.path == '/':
-                self.send_response(200)
-                self.send_header('Content-type', 'text/html')
-                self.end_headers()
-                self.wfile.write(HTML_CONTENT.encode('utf-8'))
-            else:
-                self.send_response(404)
+            try:
+                if self.path == '/' or self.path == '/index.html':
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/html; charset=utf-8')
+                    self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+                    self.end_headers()
+                    self.wfile.write(HTML_CONTENT.encode('utf-8'))
+                else:
+                    self.send_response(404)
+                    self.send_header('Content-type', 'text/plain')
+                    self.end_headers()
+                    self.wfile.write(b'404 Not Found')
+            except Exception as e:
+                print(f"Error serving request: {e}")
+                self.send_response(500)
                 self.end_headers()
         
         def log_message(self, format, *args):
             """Suppress default logging"""
-            pass
+            return None
     
-    server = HTTPServer(('localhost', port), MiniGTAHandler)
-    print(f"Mini GTA server running at http://localhost:{port}")
-    print("Press Ctrl+C to stop the server")
-    server.serve_forever()
+    server = HTTPServer(('0.0.0.0', port), MiniGTAHandler)
+    print(f"\n{'='*60}")
+    print(f"🎮 Mini GTA - Web Edition Server")
+    print(f"{'='*60}")
+    print(f"✅ Server running at http://localhost:{port}")
+    print(f"✅ Open your browser and navigate to http://localhost:{port}")
+    print(f"✅ Press Ctrl+C to stop the server")
+    print(f"{'='*60}\n")
+    
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\n✅ Server stopped")
+        server.shutdown()
 
 if __name__ == "__main__":
     # Serve the Mini GTA game
