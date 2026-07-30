@@ -1,0 +1,5 @@
+# All HTML files have been converted to Python
+# Original .html files are now served via Python HTTP servers
+# This repository is now 100% Python-based
+
+*.html
